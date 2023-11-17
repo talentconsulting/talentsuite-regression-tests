@@ -29,43 +29,86 @@ namespace talentsuite_regression_tests.Tests
         }
 
         [Fact]
+        public async Task postReports()
+        {
+            var requestBody = new Dictionary<string, object>
+        {
+            { "id", "1" },
+            { "created", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ") },
+            { "plannedTasks", "Testing, dev" },
+            { "completedTasks", "dev" },
+            { "weeknumber", 0 },
+            { "submissionDate", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ") },
+            { "projectId", "PR1" },
+            { "userId", "user1" },
+            {
+                "risks", new List<Dictionary<string, string>>
+                {
+                    new Dictionary<string, string>
+                    {
+                        { "id", "123" },
+                        { "reportId", "report1" },
+                        { "riskDetails", "risk1" },
+                        { "riskMitigation", "rm1" },
+                        { "ragStatus", "Green" }
+                    }
+                }
+            }
+        };
+
+            var requestBodyJson = JsonSerializer.Serialize(requestBody);
+
+
+            var response = await _playwrightDriver.ApiRequestContext?.PostAsync("api/reports", new APIRequestContextOptions()
+            {
+                DataObject = requestBodyJson
+            });
+
+            response.Status.Should().Be(200);
+        }
+
+        [Fact]
         public async Task getReports()
         {
             var response = await _playwrightDriver.ApiRequestContext?.GetAsync("api/reports");
             var responseBody = await response.JsonAsync();
             response.Status.Should().Be(200);
 
-            var jsonResponse = JsonSerializer.Deserialize<Response>(responseBody.Value.GetRawText(), new JsonSerializerOptions
+            var jsonResponse = JsonSerializer.Deserialize<GetReportsResponse>(responseBody.Value.GetRawText(), new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
+            var items = jsonResponse.Items;
+            var pageNumber = jsonResponse.PageNumber;
 
-            if (jsonResponse != null)
-            {
-                var items = jsonResponse.Items;
-                var pageNumber = jsonResponse.PageNumber;
-
-                pageNumber.Should().Be(1);
-                items.Count.Should().Be(1);
-                items[0].CompletedTasks.Should().Be("Task 1");
-            }
-            else
-            {
-                Console.WriteLine("Failed to deserialize");
-            }
+            pageNumber.Should().Be(1);
+            items.Count.Should().Be(1);
+            items[0].CompletedTasks.Should().Be("Task 1");
         }
 
-        [Fact(Skip = "returning 500 error")]
+        [Fact]
         public async Task getReportById()
         {
-            var response = await _playwrightDriver.ApiRequestContext?.GetAsync("api/reports/1");
-            var responseBody = await response.TextAsync(); ;
+            var response = await _playwrightDriver.ApiRequestContext?.GetAsync("api/reports/47084b7a-0d7a-462d-ab9f-5c0bbb4e70bc");
+            var responseBody = await response.JsonAsync(); ;
             response.Status.Should().Be(200);
 
+            var jsonResponse = JsonSerializer.Deserialize<Item>(responseBody.Value.GetRawText(), new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            var id = jsonResponse.Id;
+            var plannedTasks = jsonResponse.PlannedTasks;
+            var risks = jsonResponse.Risks;
+
+            id.Should().Be("47084b7a-0d7a-462d-ab9f-5c0bbb4e70bc");
+            plannedTasks.Should().Be("Task 2, Task 3");
+            risks.Count.Should().Be(1);
+            risks[0].RagStatus.Should().Be("Rag Status 2");
         }
 
-        [Fact(Skip = "returning 500 error")]
-        public async Task postReports()
+        [Fact]
+        public async Task putReports()
         {
             var requestBody = new Dictionary<string, object>
         {
@@ -94,19 +137,16 @@ namespace talentsuite_regression_tests.Tests
 
             var requestBodyJson = JsonSerializer.Serialize(requestBody);
 
-
-            var response = await _playwrightDriver.ApiRequestContext?.PostAsync("api/reports", new APIRequestContextOptions()
+            var response = await _playwrightDriver.ApiRequestContext?.PutAsync("api/reports", new APIRequestContextOptions()
             {
                 DataObject = requestBodyJson
             });
 
             response.Status.Should().Be(200);
         }
-
-
     }
 
-    public class Response
+    public class GetReportsResponse
     {
         public List<Item>? Items { get; set; }
         public int PageNumber { get; set; }
