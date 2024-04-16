@@ -27,7 +27,7 @@ public class PlaywrightDriver : IDisposable
 
         return await playwright.APIRequest.NewContextAsync(new APIRequestNewContextOptions
         {
-            BaseURL = "https://localhost:7055/",
+            BaseURL = "https://localhost:7289/",
             IgnoreHTTPSErrors = true
         });
     }
